@@ -1,9 +1,9 @@
 /*
  * Author: Anthony Miller
  * Date: 11/21/2013
- * Name: happy_th.c
+ * Name: happy_mp.c
  *
- * Threaded implimintaion for finding primes and happy numbers
+ * Multi-proccess implimintaion for finding primes and happy numbers
  */
 
 #include"functions.h"
