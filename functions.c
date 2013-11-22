@@ -5,12 +5,27 @@
  *
  * Holds functions used by both implimintations
  */
+
+/*
+ * errEXIT
+ *
+ * char *text = text to print on error
+ *
+ * prints inputed text and displays error and exits
+ */
 void errEXIT(char *text) 
 {
 	perror(text);
 	exit(EXIT_FAILURE);
 }
 
+/*
+ * Usage
+ *
+ * char *prog_name = argv[0] 
+ *
+ * Outputs proper usage
+ */
 void usage(char *prog_name) 
 {
 	printf("%s [-p <number or procs/threads>] <number>\n", prog_name);
