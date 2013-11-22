@@ -1,16 +1,12 @@
-#include<stdio.h>
-#include<stdlib.h>
-#include<fcntl.h>
-#include<getopt.h>
-#include<sys/stat.h>
-#include<sys/types.h>
-#include<unistd.h>
+/*
+ * Author: Anthony Miller
+ * Date: 11/21/2013
+ * Name: happy_th.c
+ *
+ * Threaded implimintaion for finding primes and happy numbers
+ */
 
-void usage(char *prog_name) 
-{
-	printf("%s [-p <number or procs/threads>] <number>\n", prog_name);
-	exit(EXIT_SUCCESS);
-}
+#include"functions.h"
 
 int main (int argc, char *argv[]) 
 {
