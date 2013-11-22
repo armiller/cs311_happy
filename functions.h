@@ -16,3 +16,5 @@
 void errEXIT(char *text);
 
 void usage(char *prog_name);
+
+int get_args(int argc, char *argv[], int *num_procs);

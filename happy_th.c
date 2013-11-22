@@ -10,30 +10,11 @@
 
 int main (int argc, char *argv[]) 
 {
-	int procs;
+	int procs; 
 	int opt;
 	int n;
 
-	if (argc < 2)
-		usage(argv[0]);
-
-	while ((opt = getopt(argc, argv, "p:h")) != -1) {
-		switch(opt) {
-			case 'p':
-				procs = atoi(optarg);
-				break;
-			case 'h':
-				usage(argv[0]);		
-				break;	
-			case '?':
-				exit(EXIT_FAILURE);
-		}
-	}
-
-	if (optind == argc) 
-		usage(argv[0]);
-
-	n = atoi(argv[optind]);
+	n = get_args(argc, argv, &procs);
 
 	return 0;
 }
