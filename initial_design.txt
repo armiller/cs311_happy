@@ -1,0 +1,9 @@
+﻿Both methods of the application will be under 2 c files name happy_th and happy_pr. Getopt will be used to select whether the method is threads or processes. Within the main function the sieve algorithm will be called with the main process to find all of the prime number within the main function. Sieve will need to be rewritten to use a bitmap instead of an integer array. Basic sieve function:
+
+1. Make bitmap. Maxnum / 8 (since char is 8 bits)
+2. memset bitmap to 0
+3. Loop from 2 to floor.sqrt(Maxnum)
+4. Use one mutex to check for prime numbers
+5. If number is prime mark it 0 else 1. (using same mutex)
+
+Once the sieve function is complete then what every choice was made at the beginning will be executed. For the multiple processes there will be a loop that forks all of the children. A number will increment in steps to each child process starts at a different section of the bitmap. So for 2 procs it will be split in half, 3 split into thirds, etc. The same logical steps will be used for threads but there may need to be a mutex on possible collision spots between each thread in the bitmap. At this moment of time I do not know how the happy numbers will work since I will need to split each number into digits. Finding a way to do that I would have each thread of process create a lock on the first number it finds that is not locked and loop until the number reaches 1. In the case where the number is not happy then I think there will have to be an internal timer which counts until it reaches a timeout variable. Otherwise the threads or procs will endlessly loop.
