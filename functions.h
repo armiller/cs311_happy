@@ -11,7 +11,12 @@
 #include<getopt.h>
 #include<sys/types.h>
 #include<unistd.h>
+#include<strings.h>
 #include"functions.c"
+
+#define setbit(A,k)     ( A[(k/32)] |= (1 << (k%32)) )
+#define clearbit(A,k)   ( A[(k/32)] &= ~(1 << (k%32)) )            
+#define testbit(A,k)    ( A[(k/32)] & (1 << (k%32)) )
 
 void errEXIT(char *text);
 
