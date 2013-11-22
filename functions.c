@@ -68,4 +68,3 @@ int get_args(int argc, char *argv[], int *num_procs)
 
 	return n;
 }
-
