@@ -51,7 +51,7 @@ int get_args(int argc, char *argv[], int *num_procs)
 	while ((opt = getopt(argc, argv, "p:h")) != -1) {
 		switch(opt) {
 			case 'p':
-				num_procs = atoi(optarg);
+				*num_procs = atoi(optarg);
 				break;
 			case 'h':
 				usage(argv[0]);		
