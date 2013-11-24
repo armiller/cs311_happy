@@ -15,6 +15,7 @@
 #include"functions.c"
 
 #define _BSD_SOURCE
+#define _POSIX_C_SOURCE
 
 #define setbit(A,k)     ( A[(k/32)] |= (1 << (k%32)) )
 #define clearbit(A,k)   ( A[(k/32)] &= ~(1 << (k%32)) )            
