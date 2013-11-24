@@ -1,5 +1,5 @@
 CC = icc
-CFLAGS = -Wall -std=c99 -lrt -D_XOPEN_SOURCE
+CFLAGS = -Wall -std=c99 -lrt 
 CTARGET = happy
 
 TEXSOURCE = assign4
@@ -13,7 +13,7 @@ mp:
 	${CC} ${CFLAGS} -o ${CTARGET}_mp.out ${LDFLAGS} ${CTARGET}_mp.c -DDEBUG
 
 th: 
-	${CC} ${CFLAGS} -o ${CTARGET}_th.out ${LDFLAGS} ${CTARGET}_th.c -DDEBUG
+	${CC} -pthread ${CFLAGS} -o ${CTARGET}_th.out ${LDFLAGS} ${CTARGET}_th.c -DDEBUG
 
 dvi: ${TEXSOURCE}.tex 
 #	pygmentize the input source file -- THIS NAME SHOULD BE SAFE
