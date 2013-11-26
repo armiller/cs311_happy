@@ -42,48 +42,63 @@ static void *thread_func (void *arg)
 	struct th_data *thread = (struct th_data*) arg;
 	int n = thread->maxnum;
 
-	local_index = thread->start_index;
-	next_index = thread->next_index;
-	next_block = thread->next_block;
-	block_size = thread->block_size;
-	block = thread->block;
+	//local_index = thread->start_index;
+	//next_index = thread->next_index;
+	//next_block = thread->next_block;
+	//block_size = thread->block_size;
+	//block = thread->block;
 
-	printf("thread %ld block %d local_index %d next_index %d next_block %d\n", thread->pid, block, local_index, next_index, next_block);
+	//printf("thread %ld block %d local_index %d next_index %d next_block %d\n", thread->pid, block, local_index, next_index, next_block);
 
-	while (prime < (int) sqrt(n)) {
-		
-		if (!testbit(thread->bit_pointer, block + prime)) {
-			for (j = 2; prime * j < next_block; j++) {
-				setbit(thread->bit_pointer, block + (prime * j));
-			}
-		}
-
-		prime++;
-	}
-
-	//while (prime < (int)sqrt(thread->maxnum)) {
-
-	//	pthread_mutex_lock(&mutex_avail);
-	//	if (testbit(thread->bit_pointer, avail)){
-	//		
-	//	}
-	//	prime = avail;
-	//	avail++;
-	//	pthread_mutex_unlock(&mutex_avail);
-	//	//s = pthread_mutex_lock(&mtx);
-	//	//if (s != 0) {
-	//	//	errEXIT("mutex lock");
-	//	//}
-	//	if (!testbit(thread->bit_pointer, prime)) {
-	//	//	s = pthread_mutex_unlock(&mtx);
-	//		//if (s != 0) {
-	//		//	errEXIT("mutex unlock");
-	//		//}
-	//		for (j = 2; prime * j < n; j++) {
-	//			setbit(thread->bit_pointer, (prime * j));
+	//while (prime < (int) sqrt(n)) {
+	//	
+	//	if (!testbit(thread->bit_pointer, block + prime)) {
+	//		for (j = 2; prime * j < next_block; j++) {
+	//			setbit(thread->bit_pointer, block + (prime * j));
 	//		}
 	//	}
+
+	//	prime++;
 	//}
+
+	while (prime < (int)sqrt(thread->maxnum)) {
+
+		pthread_mutex_lock(&mutex_avail);
+		if (s != 0) {
+			errEXIT("mutex lock");
+		}
+		prime = avail;
+		avail++;
+		pthread_mutex_unlock(&mutex_avail);
+		if (s != 0) {
+			errEXIT("mutex lock");
+		}
+
+		pthread_mutex_lock(&mutex_avail);
+		if (s != 0) {
+			errEXIT("mutex unlock");
+		}
+		local = testbit(thread->bit_pointer, prime);
+		pthread_mutex_unlock(&mutex_avail);
+		if (s != 0) {
+			errEXIT("mutex unlock");
+		}
+		if (!local) {
+
+			for (j = 2; prime * j < n; j++) {
+
+				pthread_mutex_lock(&mutex_avail);
+				if (s != 0) {
+					errEXIT("mutex unlock");
+				}
+				setbit(thread->bit_pointer, (prime * j));
+				pthread_mutex_unlock(&mutex_avail);
+				if (s != 0) {
+					errEXIT("mutex unlock");
+				}
+			}
+		}
+	}
 
 	pthread_exit((void *) 0);
 }
@@ -120,16 +135,8 @@ int main (int argc, char *argv[])
 	thread_block = n / procs;
 
 	for (i = 0; i < procs; i++) {
-		threads[i].start_index = index;
-		threads[i].block = block;
-		block += thread_block;
-		index += thread_index;
-
-		threads[i].next_block = block;
-		threads[i].next_index = index;
 		threads[i].thread_num = i + 1;
 		threads[i].maxnum = n;
-		threads[i].block_size = thread_block;
 		threads[i].bit_pointer = bitmap;
 		s = pthread_create(&threads[i].pid, &attr, thread_func, (void *)&threads[i]);
 		if (s != 0) {
@@ -148,10 +155,6 @@ int main (int argc, char *argv[])
 
 	pthread_mutex_destroy(&mutex_avail);
 
-	for (i = 1; i < n; i++) {
-		if (!testbit(bitmap, i))
-			printf("bit %d set\n", i);
-	}
 
 	return 0;
 }
