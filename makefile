@@ -13,8 +13,7 @@ mp:
 	${CC} ${CFLAGS} -o ${CTARGET}_mp.out ${LDFLAGS} ${CTARGET}_mp.c -DDEBUG
 
 th: 
-	${CC} -pthread ${CFLAGS} -o ${CTARGET}_th.out ${LDFLAGS} ${CTARGET}_th.c -DDEBUG
-
+	${CC} -pthread ${CFLAGS} -o ${CTARGET}_th.out -DDEBUG ${LDFLAGS} ${CTARGET}_th.c 
 dvi: ${TEXSOURCE}.tex 
 #	pygmentize the input source file -- THIS NAME SHOULD BE SAFE
 #	pygmentize -f latex -o __${TARGET}.tex ${TARGET}.tex
