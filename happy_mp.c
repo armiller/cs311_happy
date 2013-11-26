@@ -40,19 +40,48 @@ void *mount_shmem(char *path, int object_size){
 	return addr;
 }
 
+//int mp_sieve(int maxnum) {
+//
+//	int prime;
+//
+//	while (prime < (int) sqrt(maxnum)) {
+//
+//	}
+//}
+
 int main (int argc, char *argv[]) 
 {
 	int procs; 
+	unsigned int *bitmap
 	int opt;
 	int n;
 	int m;
 	int i;
 	int k;
-	int *bitmap; 
+	void *addr; 
+	int objectsize;
 
 	n = get_args(argc, argv, &procs);
+	objectsize = 1024 * 1024 * 512;
 
-	bitmap = mount_shmem("milleant", (n/4));
+	addr = mount_shmem("milleant", objectsize);
+
+	bitmap = (int*) addr;
+
+	for (i = 0; i < procs; i++) {
+		switch(fork()) {
+			case -1:
+				errEXIT("Child creation");
+			case 0:
+				break;
+
+			default:
+				break;
+
+
+
+		}
+	}
 	
 
 	return 0;

@@ -13,6 +13,7 @@
 #include<unistd.h>
 #include<strings.h>
 #include"functions.c"
+#include<math.h>
 
 #define _BSD_SOURCE
 #define _POSIX_C_SOURCE
