@@ -11,12 +11,35 @@
 #include<sys/time.h>
 #include<wait.h>
 #include"functions.h"
-
 #define CACHE 256
 enum { h_unknown = 0, h_yes, h_no };
 int *sieve_index;
 unsigned char buf[CACHE] = {0, h_yes, 0};
+
+static void parent_sig(int sig) {
+
+	int i;
+	for (i = 0; i < sig_procs; i++) {
+		wait(NULL);
+	}
+	_exit(EXIT_FAILURE);
+}
+
+static void child_sig(int sig) {
+
+	_exit(EXIT_FAILURE);
+
+}
  
+/* 
+ * Happy
+ *
+ * int n = variable to check
+ *
+ * Taken from rosettacode example
+ *
+ * http://rosettacode.org/wiki/Happy_numbers
+ */
 int happy(int n)
 {
 	int sum = 0, x, nn;
@@ -31,7 +54,6 @@ int happy(int n)
 	if (n < CACHE) buf[n] = 2 - x;
 	return x;
 }
- 
 /*
  * Mount Shem
  *
@@ -68,24 +90,24 @@ int mp_sieve(int maxnum, int *bitmap, sem_t *in_sem) {
 	int prime = 2;
 	int local;
 	int j;
+	int s;
 
 	while (prime < (int) sqrt(maxnum)) {
-		sem_wait(in_sem);
+	//	s = sem_wait(in_sem);
+		if (s != 0)
+			errEXIT("sem lock");
 		prime = *sieve_index;
 		*sieve_index = *sieve_index + 1;
-		sem_post(in_sem);
+	//	s = sem_post(in_sem);
+		if (s != 0) 
+			errEXIT("sem unlock");
 
-//		sem_wait(in_sem);
 		local = testbit(bitmap, prime);
-//		sem_post(in_sem);
 
 		if (!local) {
 
 			for (j = 2; prime * j < maxnum; j++) {
-//				printf("child %d setting bit %d\n", getpid(), (prime * j));
-//				sem_wait(in_sem);
 				setbit(bitmap, (prime * j));
-//				sem_post(in_sem);
 			}
 		}
 	}
@@ -97,7 +119,6 @@ int mp_sieve(int maxnum, int *bitmap, sem_t *in_sem) {
 
 int main (int argc, char *argv[]) 
 {
-	int cnt = 8;
 	int procs; 
 	int *bitmap;
 	int bitmap_size;
@@ -108,14 +129,33 @@ int main (int argc, char *argv[])
 	int k;
 	void *addr; 
 	int objectsize;
-	sem_t *sem = sem_open("milleant_sem", O_CREAT, S_IRUSR | S_IWUSR, 1);
+	struct sigaction p_sa;
+	struct sigaction c_sa;
+	
+	sig_procs = procs;
+	sigemptyset(&c_sa.sa_mask);
+	sigemptyset(&p_sa.sa_mask);
+	p_sa.sa_flags = 0;
+	c_sa.sa_flags = 0;
+	p_sa.sa_handler = parent_sig; 
+	c_sa.sa_handler = child_sig;
+	if (sigaction(SIGINT, &p_sa, NULL) == -1)
+		errEXIT("sigaction");
+	if (sigaction(SIGQUIT, &p_sa, NULL) == -1)
+		errEXIT("sigaction");
+	if (sigaction(SIGHUP, &p_sa, NULL) == -1 )
+		errEXIT("sigaction");
+
+	sem_t *sem;
+	sem = sem_open("milleant_sem", O_CREAT, S_IRUSR | S_IWUSR, 1);
+	sem_init(sem, 0, 0);
 
 	if (!sem) 
 		errEXIT("sem creation");
 
 	n = get_args(argc, argv, &procs);
 	objectsize = 1024 * 1024 * 512;
-	bitmap_size = 2147483647 / 32 + 1;
+	bitmap_size = 2147483646 / 32 + 1;
 
 	addr = mount_shmem("milleant", objectsize);
 
@@ -125,16 +165,20 @@ int main (int argc, char *argv[])
 
 	bzero(bitmap, bitmap_size);
 
+
 	for (i = 0; i < procs; i++) {
 
 		switch(fork()) {
 			case -1:
 				errEXIT("Child creation");
 			case 0:
-//				printf("child %d sieve_index %d", getpid(), *sieve_index);
+				if (sigaction(SIGINT, &c_sa, NULL) == -1)
+					errEXIT("sigaction");
+				if (sigaction(SIGQUIT, &c_sa, NULL) == -1)
+					errEXIT("sigaction");
+				if (sigaction(SIGHUP, &c_sa, NULL) == -1)
+					errEXIT("sigaction");
 				mp_sieve(n, bitmap, sem);
-				break;
-
 			default:
 				break;
 		}
@@ -146,13 +190,13 @@ int main (int argc, char *argv[])
 
 	for (i = 1; i < n; i++) {
 		if(!testbit(bitmap, i)) {
-			//printf("set bit %d\n", i);
-			if (happy(i)); 
-			//	printf("bit %d is happy\n", i);
+			printf("set bit %d\n", i);
 		}
 	}
 
 	shm_unlink("milleant");
+
+	sem_close(sem);
 
 	return 0;
 }
