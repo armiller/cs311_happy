@@ -9,7 +9,9 @@
 #include"functions.h"
 #include<pthread.h>
 #include<error.h>
+#include<sys/stat.h>
 #include<math.h>
+#include<signal.h>
 #define CACHE 256
 
 int avail = 2;
@@ -19,21 +21,6 @@ pthread_mutex_t mutex_avail;
 
 enum { h_unknown = 0, h_yes, h_no };
 unsigned char buf[CACHE] = {0, h_yes, 0};
- 
-int happy(int n)
-{
-	int sum = 0, x, nn;
-	if (n < CACHE) {
-		if (buf[n]) return 2 - buf[n];
-		buf[n] = h_no;
-	}
- 
-	for (nn = n; nn; nn /= 10) x = nn % 10, sum += x * x;
- 
-	x = happy(sum);
-	if (n < CACHE) buf[n] = 2 - x;
-	return x;
-}
 
 struct th_data {
 	pthread_t pid;
@@ -54,6 +41,28 @@ struct happy_data {
 	int num;
 	int *bit_pointer;
 };
+ 
+int happy(int n)
+{
+	int sum = 0, x, nn;
+	if (n < CACHE) {
+		if (buf[n]) return 2 - buf[n];
+		buf[n] = h_no;
+	}
+ 
+	for (nn = n; nn; nn /= 10) x = nn % 10, sum += x * x;
+ 
+	x = happy(sum);
+	if (n < CACHE) buf[n] = 2 - x;
+	return x;
+}
+
+
+
+static void parent_sig(int sig) {
+
+	_exit(EXIT_FAILURE);
+}
 
 static void *happy_thread (void *arg)
 {
@@ -181,6 +190,15 @@ int main (int argc, char *argv[])
 	struct th_data *threads; 
 	struct happy_data *hp_threads;
 	pthread_attr_t attr;
+	struct sigaction p_sa;
+
+	sigemptyset(&p_sa.sa_mask);
+	if (sigaction(SIGINT, &p_sa, NULL) == -1)
+		errEXIT("sigaction");
+	if (sigaction(SIGQUIT, &p_sa, NULL) == -1)
+		errEXIT("sigaction");
+	if (sigaction(SIGHUP, &p_sa, NULL) == -1 )
+		errEXIT("sigaction");
 
 	pthread_mutex_init(&mutex_avail, NULL);
 	pthread_attr_init(&attr);
@@ -215,11 +233,6 @@ int main (int argc, char *argv[])
 		}
 	}
 
-	//for (i = 0; i < n; i++) {
-	//	if (!testbit(bitmap, i))
-	//		printf("bit %d set\n", i);
-	//}
-	
 	for (i = 0; i < procs; i++) {
 		hp_threads[i].num = n;
 		hp_threads[i].bit_pointer = bitmap;
@@ -236,8 +249,6 @@ int main (int argc, char *argv[])
 	}
 
 	pthread_attr_destroy(&attr);
-
-	
 
 	pthread_mutex_destroy(&mutex_avail);
 
