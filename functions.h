@@ -14,6 +14,7 @@
 #include<strings.h>
 #include"functions.c"
 #include<math.h>
+#include<signal.h>
 
 #define _BSD_SOURCE
 #define _POSIX_C_SOURCE
