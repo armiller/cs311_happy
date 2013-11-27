@@ -1,5 +1,5 @@
 CC = icc
-CFLAGS = -Wall -std=c99 -lrt -lm
+CFLAGS = -Wall -std=c99 -lrt
 CTARGET = happy
 
 TEXSOURCE = assign4
@@ -10,7 +10,7 @@ debug: ${SOURCE} ${INCLUDES}
 	${CC} ${CFLAGS} ${CSOURCE} -o ${CTARGET} ${LDFLAGS} -DDEBUG
 
 mp:
-	${CC} ${CFLAGS} -o ${CTARGET}_mp.out ${LDFLAGS} ${CTARGET}_mp.c -DDEBUG
+	${CC} ${CFLAGS} -o ${CTARGET}_mp.out ${LDFLAGS} ${CTARGET}_mp.c -DDEBUG -lm
 
 th: 
 	${CC} -pthread ${CFLAGS} -o ${CTARGET}_th.out -DDEBUG ${LDFLAGS} ${CTARGET}_th.c 
