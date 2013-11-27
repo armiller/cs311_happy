@@ -7,8 +7,13 @@
  */
 #include<sys/mman.h>
 #include<sys/stat.h>
+#include<semaphore.h>
+#include<sys/time.h>
+#include<wait.h>
 #include"functions.h"
 
+
+int *sieve_index;
 /*
  * Mount Shem
  *
@@ -40,19 +45,44 @@ void *mount_shmem(char *path, int object_size){
 	return addr;
 }
 
-//int mp_sieve(int maxnum) {
-//
-//	int prime;
-//
-//	while (prime < (int) sqrt(maxnum)) {
-//
-//	}
-//}
+int mp_sieve(int maxnum, int *bitmap, sem_t *in_sem) {
+
+	int prime = 2;
+	int local;
+	int j;
+
+
+	while (prime < (int) sqrt(maxnum)) {
+		sem_wait(in_sem);
+		prime = *sieve_index;
+		*sieve_index = *sieve_index + 1;
+		sem_post(in_sem);
+
+//		sem_wait(in_sem);
+		local = testbit(bitmap, prime);
+//		sem_post(in_sem);
+
+		if (!local) {
+
+			for (j = 2; prime * j < maxnum; j++) {
+//				printf("child %d setting bit %d\n", getpid(), (prime * j));
+//				sem_wait(in_sem);
+				setbit(bitmap, (prime * j));
+//				sem_post(in_sem);
+			}
+		}
+	}
+
+	exit(EXIT_SUCCESS);
+
+	return 0;
+}
 
 int main (int argc, char *argv[]) 
 {
 	int procs; 
-	unsigned int *bitmap
+	int *bitmap;
+	int bitmap_size;
 	int opt;
 	int n;
 	int m;
@@ -60,29 +90,49 @@ int main (int argc, char *argv[])
 	int k;
 	void *addr; 
 	int objectsize;
+	sem_t *sem = sem_open("milleant_sem", O_CREAT, S_IRUSR | S_IWUSR, 1);
+
+	if (!sem) 
+		errEXIT("sem creation");
 
 	n = get_args(argc, argv, &procs);
 	objectsize = 1024 * 1024 * 512;
+	bitmap_size = 2147483647 / 32 + 1;
 
 	addr = mount_shmem("milleant", objectsize);
 
 	bitmap = (int*) addr;
+	sieve_index = (int*) (bitmap + bitmap_size + 1);
+	*sieve_index = 2;
+
+	bzero(bitmap, bitmap_size);
 
 	for (i = 0; i < procs; i++) {
+
 		switch(fork()) {
 			case -1:
 				errEXIT("Child creation");
 			case 0:
+//				printf("child %d sieve_index %d", getpid(), *sieve_index);
+				mp_sieve(n, bitmap, sem);
 				break;
 
 			default:
 				break;
 
-
-
 		}
 	}
-	
+
+	for (i = 0; i < procs; i++) {
+		wait(NULL);
+	}
+
+	for (i = 1; i < n; i++) {
+		if(!testbit(bitmap, i))
+			printf("set bit %d\n", i);
+	}
+
+	shm_unlink("milleant");
 
 	return 0;
 }
