@@ -10,9 +10,30 @@
 #include<pthread.h>
 #include<error.h>
 #include<math.h>
+#define CACHE 256
 
 int avail = 2;
+int happy_ind = 1;
+int total_happy = 0;
 pthread_mutex_t mutex_avail;
+
+enum { h_unknown = 0, h_yes, h_no };
+unsigned char buf[CACHE] = {0, h_yes, 0};
+ 
+int happy(int n)
+{
+	int sum = 0, x, nn;
+	if (n < CACHE) {
+		if (buf[n]) return 2 - buf[n];
+		buf[n] = h_no;
+	}
+ 
+	for (nn = n; nn; nn /= 10) x = nn % 10, sum += x * x;
+ 
+	x = happy(sum);
+	if (n < CACHE) buf[n] = 2 - x;
+	return x;
+}
 
 struct th_data {
 	pthread_t pid;
@@ -27,6 +48,48 @@ struct th_data {
 	int start_index;
 	int block;
 }; 
+
+struct happy_data {
+	pthread_t pid;
+	int num;
+	int *bit_pointer;
+};
+
+static void *happy_thread (void *arg)
+{
+	struct happy_data *thread = (struct happy_data*) arg;
+	int local = 1;
+	int s;
+
+	while (local < thread->num) {
+
+		s = pthread_mutex_lock(&mutex_avail);
+		if (s != 0) {
+			errEXIT("mutex lock");
+		}
+		local = happy_ind;
+		happy_ind++;
+		s = pthread_mutex_unlock(&mutex_avail);
+		if (s != 0) {
+			errEXIT("mutex lock");
+		}
+		if (!testbit(thread->bit_pointer, local)) {
+			if (happy(local)) {
+				s = pthread_mutex_lock(&mutex_avail);
+				if (s != 0) {
+					errEXIT("mutex lock");
+				}
+				total_happy++;
+				s = pthread_mutex_unlock(&mutex_avail);
+				if (s != 0) {
+					errEXIT("mutex lock");
+				}
+			}
+		}
+	}
+
+	pthread_exit((void *) 0);
+}
 	
 static void *thread_func (void *arg) 
 { 
@@ -116,6 +179,7 @@ int main (int argc, char *argv[])
 	int thread_index;
 	int s;
 	struct th_data *threads; 
+	struct happy_data *hp_threads;
 	pthread_attr_t attr;
 
 	pthread_mutex_init(&mutex_avail, NULL);
@@ -125,6 +189,7 @@ int main (int argc, char *argv[])
 	n = get_args(argc, argv, &procs);
 
 	threads = (struct th_data*) malloc(procs * sizeof(struct th_data));
+	hp_threads = (struct happy_data*) malloc(procs * sizeof(struct happy_data));
 
 	bitmap = malloc(((n/32) + 1) *sizeof(int));
 
@@ -143,9 +208,6 @@ int main (int argc, char *argv[])
 			error(EXIT_FAILURE, s, "%s\n", "Pthread creation");
 		}
 	}
-
-	pthread_attr_destroy(&attr);
-
 	for (i = 0; i < procs; i++) {
 		s = pthread_join(threads[i].pid, NULL);
 		if (s != 0) {
@@ -153,7 +215,33 @@ int main (int argc, char *argv[])
 		}
 	}
 
+	//for (i = 0; i < n; i++) {
+	//	if (!testbit(bitmap, i))
+	//		printf("bit %d set\n", i);
+	//}
+	
+	for (i = 0; i < procs; i++) {
+		hp_threads[i].num = n;
+		hp_threads[i].bit_pointer = bitmap;
+		s = pthread_create(&hp_threads[i].pid, &attr, happy_thread, (void *)&hp_threads[i]);
+		if (s != 0) {
+			error(EXIT_FAILURE, s, "%s\n", "Pthread creation");
+		}
+	}
+	for (i = 0; i < procs; i++) {
+		s = pthread_join(hp_threads[i].pid, NULL);
+		if (s != 0) {
+			error(EXIT_FAILURE, s, "%s\n", "Pthread join");
+		}
+	}
+
+	pthread_attr_destroy(&attr);
+
+	
+
 	pthread_mutex_destroy(&mutex_avail);
+
+	printf("Total happy %d\n", total_happy);
 
 	return 0;
 }
