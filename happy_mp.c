@@ -12,8 +12,26 @@
 #include<wait.h>
 #include"functions.h"
 
-
+#define CACHE 256
+enum { h_unknown = 0, h_yes, h_no };
 int *sieve_index;
+unsigned char buf[CACHE] = {0, h_yes, 0};
+ 
+int happy(int n)
+{
+	int sum = 0, x, nn;
+	if (n < CACHE) {
+		if (buf[n]) return 2 - buf[n];
+		buf[n] = h_no;
+	}
+ 
+	for (nn = n; nn; nn /= 10) x = nn % 10, sum += x * x;
+ 
+	x = happy(sum);
+	if (n < CACHE) buf[n] = 2 - x;
+	return x;
+}
+ 
 /*
  * Mount Shem
  *
@@ -51,7 +69,6 @@ int mp_sieve(int maxnum, int *bitmap, sem_t *in_sem) {
 	int local;
 	int j;
 
-
 	while (prime < (int) sqrt(maxnum)) {
 		sem_wait(in_sem);
 		prime = *sieve_index;
@@ -80,6 +97,7 @@ int mp_sieve(int maxnum, int *bitmap, sem_t *in_sem) {
 
 int main (int argc, char *argv[]) 
 {
+	int cnt = 8;
 	int procs; 
 	int *bitmap;
 	int bitmap_size;
@@ -119,7 +137,6 @@ int main (int argc, char *argv[])
 
 			default:
 				break;
-
 		}
 	}
 
@@ -128,8 +145,11 @@ int main (int argc, char *argv[])
 	}
 
 	for (i = 1; i < n; i++) {
-		if(!testbit(bitmap, i))
-			printf("set bit %d\n", i);
+		if(!testbit(bitmap, i)) {
+			//printf("set bit %d\n", i);
+			if (happy(i)); 
+			//	printf("bit %d is happy\n", i);
+		}
 	}
 
 	shm_unlink("milleant");
