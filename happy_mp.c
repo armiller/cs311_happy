@@ -12,6 +12,7 @@
 #include<wait.h>
 #include"functions.h"
 #define CACHE 256
+
 enum { h_unknown = 0, h_yes, h_no };
 int *sieve_index;
 unsigned char buf[CACHE] = {0, h_yes, 0};
