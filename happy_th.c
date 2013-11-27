@@ -42,6 +42,15 @@ struct happy_data {
 	int *bit_pointer;
 };
  
+/* 
+ * Happy
+ *
+ * int n = variable to check
+ *
+ * Taken from rosettacode example
+ *
+ * http://rosettacode.org/wiki/Happy_numbers
+ */
 int happy(int n)
 {
 	int sum = 0, x, nn;
@@ -64,6 +73,13 @@ static void parent_sig(int sig) {
 	_exit(EXIT_FAILURE);
 }
 
+
+/*
+ * Happy Thread
+ * 
+ * Parllel happy process with threads.
+ * each thread gets a unique index
+ */
 static void *happy_thread (void *arg)
 {
 	struct happy_data *thread = (struct happy_data*) arg;
@@ -100,6 +116,12 @@ static void *happy_thread (void *arg)
 	pthread_exit((void *) 0);
 }
 	
+/* 
+ * thread_func
+ *
+ * main parrelle sieve function that gives each thread 
+ * a unique index
+ */
 static void *thread_func (void *arg) 
 { 
 	int local; 
@@ -113,25 +135,6 @@ static void *thread_func (void *arg)
 	int prime = 2;
 	struct th_data *thread = (struct th_data*) arg;
 	int n = thread->maxnum;
-
-	//local_index = thread->start_index;
-	//next_index = thread->next_index;
-	//next_block = thread->next_block;
-	//block_size = thread->block_size;
-	//block = thread->block;
-
-	//printf("thread %ld block %d local_index %d next_index %d next_block %d\n", thread->pid, block, local_index, next_index, next_block);
-
-	//while (prime < (int) sqrt(n)) {
-	//	
-	//	if (!testbit(thread->bit_pointer, block + prime)) {
-	//		for (j = 2; prime * j < next_block; j++) {
-	//			setbit(thread->bit_pointer, block + (prime * j));
-	//		}
-	//	}
-
-	//	prime++;
-	//}
 
 	while (prime < (int)sqrt(thread->maxnum)) {
 
@@ -184,14 +187,13 @@ int main (int argc, char *argv[])
 	int i;
 	int block = 0;
 	int index = 2;
-	int thread_block;
-	int thread_index;
 	int s;
 	struct th_data *threads; 
 	struct happy_data *hp_threads;
 	pthread_attr_t attr;
 	struct sigaction p_sa;
 
+	/* signals */
 	sigemptyset(&p_sa.sa_mask);
 	if (sigaction(SIGINT, &p_sa, NULL) == -1)
 		errEXIT("sigaction");
@@ -200,6 +202,7 @@ int main (int argc, char *argv[])
 	if (sigaction(SIGHUP, &p_sa, NULL) == -1 )
 		errEXIT("sigaction");
 
+	/* mutexs */
 	pthread_mutex_init(&mutex_avail, NULL);
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
@@ -213,10 +216,7 @@ int main (int argc, char *argv[])
 
 	bzero(bitmap, (((n/32) + 1) * sizeof(int))); 
 
-	thread_index = (int) sqrt(n) / procs;
-
-	thread_block = n / procs;
-
+	/* sieve worker threads */
 	for (i = 0; i < procs; i++) {
 		threads[i].thread_num = i + 1;
 		threads[i].maxnum = n;
@@ -226,6 +226,8 @@ int main (int argc, char *argv[])
 			error(EXIT_FAILURE, s, "%s\n", "Pthread creation");
 		}
 	}
+
+	/* close sieve worker threads */
 	for (i = 0; i < procs; i++) {
 		s = pthread_join(threads[i].pid, NULL);
 		if (s != 0) {
@@ -233,6 +235,7 @@ int main (int argc, char *argv[])
 		}
 	}
 
+	/* happy worker threads */
 	for (i = 0; i < procs; i++) {
 		hp_threads[i].num = n;
 		hp_threads[i].bit_pointer = bitmap;
@@ -241,6 +244,8 @@ int main (int argc, char *argv[])
 			error(EXIT_FAILURE, s, "%s\n", "Pthread creation");
 		}
 	}
+
+	/* close happy worker threads */
 	for (i = 0; i < procs; i++) {
 		s = pthread_join(hp_threads[i].pid, NULL);
 		if (s != 0) {

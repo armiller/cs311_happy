@@ -10,26 +10,24 @@
 #include<semaphore.h>
 #include<sys/time.h>
 #include<wait.h>
+#include<signal.h>
 #include"functions.h"
 #define CACHE 256
+#define _POSIX_C_SOURCE
 
 enum { h_unknown = 0, h_yes, h_no };
 int *sieve_index;
+int *happy_index;
 unsigned char buf[CACHE] = {0, h_yes, 0};
 
-static void parent_sig(int sig) {
-
-	int i;
-	for (i = 0; i < sig_procs; i++) {
-		wait(NULL);
-	}
+static void parent_sig(int sig) 
+{
 	_exit(EXIT_FAILURE);
 }
 
-static void child_sig(int sig) {
-
+static void child_sig(int sig) 
+{
 	_exit(EXIT_FAILURE);
-
 }
  
 /* 
@@ -86,6 +84,14 @@ void *mount_shmem(char *path, int object_size){
 	return addr;
 }
 
+/*
+ * mp_sieve
+ * int maxnum = number to find up to
+ * int *bitmap = bitmap pointer
+ * sem_t *in_sem = sem pointer 
+ *
+ * Runs sieve in parrall with each process getting a unique index
+ */
 int mp_sieve(int maxnum, int *bitmap, sem_t *in_sem) {
 
 	int prime = 2;
@@ -126,14 +132,17 @@ int main (int argc, char *argv[])
 	int opt;
 	int n;
 	int m;
+	int numhappy = 0;
 	int i;
+	int b;
 	int k;
 	void *addr; 
 	int objectsize;
 	struct sigaction p_sa;
 	struct sigaction c_sa;
+	sem_t *sem;
 	
-	sig_procs = procs;
+	/* signals */
 	sigemptyset(&c_sa.sa_mask);
 	sigemptyset(&p_sa.sa_mask);
 	p_sa.sa_flags = 0;
@@ -147,26 +156,29 @@ int main (int argc, char *argv[])
 	if (sigaction(SIGHUP, &p_sa, NULL) == -1 )
 		errEXIT("sigaction");
 
-	sem_t *sem;
+	/* Open shared memory object */
 	sem = sem_open("milleant_sem", O_CREAT, S_IRUSR | S_IWUSR, 1);
-	sem_init(sem, 0, 0);
 
 	if (!sem) 
 		errEXIT("sem creation");
 
+	/* get arguments */
 	n = get_args(argc, argv, &procs);
 	objectsize = 1024 * 1024 * 512;
 	bitmap_size = 2147483646 / 32 + 1;
 
 	addr = mount_shmem("milleant", objectsize);
 
+	/* mapping memory pointers */
 	bitmap = (int*) addr;
 	sieve_index = (int*) (bitmap + bitmap_size + 1);
 	*sieve_index = 2;
+	happy_index = (int*) (sieve_index + sizeof(int*));
+	*happy_index = 0; 
 
 	bzero(bitmap, bitmap_size);
 
-
+	/* Sieve child forks */
 	for (i = 0; i < procs; i++) {
 
 		switch(fork()) {
@@ -189,11 +201,40 @@ int main (int argc, char *argv[])
 		wait(NULL);
 	}
 
-	for (i = 1; i < n; i++) {
-		if(!testbit(bitmap, i)) {
-			printf("set bit %d\n", i);
+	/* happy child forks */
+	for (i = 0; i < procs; i++) {
+
+		switch(fork()) {
+
+			case -1:
+				errEXIT("Child creation");
+			case 0:
+				if (sigaction(SIGINT, &c_sa, NULL) == -1)
+					errEXIT("sigaction");
+				if (sigaction(SIGQUIT, &c_sa, NULL) == -1)
+					errEXIT("sigaction");
+				if (sigaction(SIGHUP, &c_sa, NULL) == -1)
+					errEXIT("sigaction");
+				b = 0;
+				while (b < n) {
+					b = *happy_index;
+					*happy_index = *happy_index + 1;
+					if (!testbit(bitmap, b))
+						if (happy(b))
+							numhappy++;
+
+				}
+				exit(EXIT_SUCCESS);
+			default:
+				break;
 		}
 	}
+
+	for (i = 0; i < procs; i++) {
+		wait(NULL);
+	}
+
+	printf("Number of happy numbers %d\n", numhappy);
 
 	shm_unlink("milleant");
 

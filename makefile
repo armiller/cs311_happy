@@ -1,5 +1,5 @@
 CC = icc
-CFLAGS = -Wall -std=c99 -lrt
+CFLAGS = -Wall -std=c99 -lrt -D_XOPEN_SOURCE
 CTARGET = happy
 
 TEXSOURCE = assign4
