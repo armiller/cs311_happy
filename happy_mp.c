@@ -18,6 +18,7 @@
 enum { h_unknown = 0, h_yes, h_no };
 int *sieve_index;
 int *happy_index;
+int *numhappy;
 unsigned char buf[CACHE] = {0, h_yes, 0};
 
 static void parent_sig(int sig) 
@@ -98,14 +99,16 @@ int mp_sieve(int maxnum, int *bitmap, sem_t *in_sem) {
 	int local;
 	int j;
 	int s;
+	int semvalue;
 
 	while (prime < (int) sqrt(maxnum)) {
-	//	s = sem_wait(in_sem);
+		s = sem_wait(in_sem);
 		if (s != 0)
 			errEXIT("sem lock");
+
 		prime = *sieve_index;
 		*sieve_index = *sieve_index + 1;
-	//	s = sem_post(in_sem);
+		s = sem_post(in_sem);
 		if (s != 0) 
 			errEXIT("sem unlock");
 
@@ -118,6 +121,8 @@ int mp_sieve(int maxnum, int *bitmap, sem_t *in_sem) {
 			}
 		}
 	}
+
+	sem_close(in_sem);
 
 	exit(EXIT_SUCCESS);
 
@@ -132,7 +137,6 @@ int main (int argc, char *argv[])
 	int opt;
 	int n;
 	int m;
-	int numhappy = 0;
 	int i;
 	int b;
 	int k;
@@ -175,6 +179,7 @@ int main (int argc, char *argv[])
 	*sieve_index = 2;
 	happy_index = (int*) (sieve_index + sizeof(int*));
 	*happy_index = 0; 
+	numhappy = (int *) (happy_index + sizeof(int*));
 
 	bzero(bitmap, bitmap_size);
 
@@ -201,6 +206,12 @@ int main (int argc, char *argv[])
 		wait(NULL);
 	}
 
+	for (i = 0; i < n; i++) {
+
+		if (!testbit(bitmap, i))
+			printf("bit %d set\n", i);
+	}
+
 	/* happy child forks */
 	for (i = 0; i < procs; i++) {
 
@@ -215,14 +226,22 @@ int main (int argc, char *argv[])
 					errEXIT("sigaction");
 				if (sigaction(SIGHUP, &c_sa, NULL) == -1)
 					errEXIT("sigaction");
+
+				printf("Child exueciting\n");
 				b = 0;
 				while (b < n) {
+					sem_wait(sem);
+					printf("b = %d happy_index %d\n", b, *happy_index);
 					b = *happy_index;
 					*happy_index = *happy_index + 1;
-					if (!testbit(bitmap, b))
-						if (happy(b))
-							numhappy++;
-
+					sem_post(sem);
+					if (!testbit(bitmap, b)) {
+						printf("bit set!");
+						printf("happy return %d\n", happy(b));
+						if (happy(b)) 
+							printf("Happy is happy!\n");
+							*numhappy = *numhappy + 1;	
+					}
 				}
 				exit(EXIT_SUCCESS);
 			default:
@@ -234,11 +253,11 @@ int main (int argc, char *argv[])
 		wait(NULL);
 	}
 
-	printf("Number of happy numbers %d\n", numhappy);
+	printf("Number of happy numbers %d\n", *numhappy);
 
 	shm_unlink("milleant");
 
-	sem_close(sem);
+	sem_unlink("milleant_sem");
 
 	return 0;
 }
