@@ -1,19 +1,16 @@
 CC = icc
 CFLAGS = -Wall -std=c99 -lrt -D_XOPEN_SOURCE
-CTARGET = happy
-
+CTARGET=happy
 TEXSOURCE = assign4
-default: pdf cleanup
-	${CC} ${CFLAGS} -o ${CTARGET} ${LDFLAGS} ${CTARGET}
 
-debug: ${SOURCE} ${INCLUDES}
-	${CC} ${CFLAGS} ${CSOURCE} -o ${CTARGET} ${LDFLAGS} -DDEBUG
+default: pdf th mp cleanup
 
 mp:
-	${CC} ${CFLAGS} -o ${CTARGET}_mp.out ${LDFLAGS} ${CTARGET}_mp.c -DDEBUG -lm
+	${CC} ${CFLAGS} -o happy_mp happy_mp.c -lm
 
 th: 
-	${CC} -pthread ${CFLAGS} -o ${CTARGET}_th.out -DDEBUG ${LDFLAGS} ${CTARGET}_th.c 
+	${CC} -pthread ${CFLAGS} -o happy_th ${LDFLAGS} happy_th.c 
+
 dvi: ${TEXSOURCE}.tex 
 #	pygmentize the input source file -- THIS NAME SHOULD BE SAFE
 #	pygmentize -f latex -o __${TARGET}.tex ${TARGET}.tex
