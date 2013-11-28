@@ -120,7 +120,6 @@ static void *thread_func (void *arg)
 { 
 	int local; 
 	int s; 
-	int local_index;
 	int j;
 	int prime = 2;
 	struct th_data *thread = (struct th_data*) arg;
@@ -139,11 +138,27 @@ static void *thread_func (void *arg)
 			errEXIT("mutex lock");
 		}
 
+		pthread_mutex_lock(&mutex_avail);
+		if (s != 0) {
+			errEXIT("mutex lock");
+		}
 		local = testbit(thread->bit_pointer, prime);
+		pthread_mutex_unlock(&mutex_avail);
+		if (s != 0) {
+			errEXIT("mutex lock");
+		}
 
 		if (!local) {
 			for (j = 2; prime * j < n; j++) {
+				pthread_mutex_lock(&mutex_avail);
+				if (s != 0) {
+					errEXIT("mutex lock");
+				}
 				setbit(thread->bit_pointer, (prime * j));
+				pthread_mutex_unlock(&mutex_avail);
+				if (s != 0) {
+					errEXIT("mutex lock");
+				}
 			}
 		}
 	}
