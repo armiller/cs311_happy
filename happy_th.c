@@ -28,12 +28,6 @@ struct th_data {
 	int maxnum;
 	int i;
 	int *bit_pointer;
-	int next_block;
-	int next_index;
-	int block_size;
-	int start_block;
-	int start_index;
-	int block;
 }; 
 
 struct happy_data {
@@ -127,10 +121,6 @@ static void *thread_func (void *arg)
 	int local; 
 	int s; 
 	int local_index;
-	int next_index;
-	int block;
-	int next_block;
-	int block_size;
 	int j;
 	int prime = 2;
 	struct th_data *thread = (struct th_data*) arg;
@@ -149,28 +139,11 @@ static void *thread_func (void *arg)
 			errEXIT("mutex lock");
 		}
 
-		pthread_mutex_lock(&mutex_avail);
-		if (s != 0) {
-			errEXIT("mutex unlock");
-		}
 		local = testbit(thread->bit_pointer, prime);
-		pthread_mutex_unlock(&mutex_avail);
-		if (s != 0) {
-			errEXIT("mutex unlock");
-		}
+
 		if (!local) {
-
 			for (j = 2; prime * j < n; j++) {
-
-				pthread_mutex_lock(&mutex_avail);
-				if (s != 0) {
-					errEXIT("mutex unlock");
-				}
 				setbit(thread->bit_pointer, (prime * j));
-				pthread_mutex_unlock(&mutex_avail);
-				if (s != 0) {
-					errEXIT("mutex unlock");
-				}
 			}
 		}
 	}
@@ -185,7 +158,6 @@ int main (int argc, char *argv[])
 	int opt;
 	int n;
 	int i;
-	int block = 0;
 	int index = 2;
 	int s;
 	struct th_data *threads; 
