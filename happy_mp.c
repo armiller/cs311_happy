@@ -112,12 +112,24 @@ int mp_sieve(int maxnum, int *bitmap, sem_t *in_sem) {
 		if (s != 0) 
 			errEXIT("sem unlock");
 
+		s = sem_wait(in_sem);
+		if (s != 0)
+			errEXIT("sem lock");
 		local = testbit(bitmap, prime);
+		s = sem_post(in_sem);
+		if (s != 0) 
+			errEXIT("sem unlock");
 
 		if (!local) {
 
 			for (j = 2; prime * j < maxnum; j++) {
+				s = sem_wait(in_sem);
+				if (s != 0)
+					errEXIT("sem lock");
 				setbit(bitmap, (prime * j));
+				s = sem_post(in_sem);
+				if (s != 0) 
+					errEXIT("sem unlock");
 			}
 		}
 	}
@@ -206,12 +218,6 @@ int main (int argc, char *argv[])
 		wait(NULL);
 	}
 
-	for (i = 0; i < n; i++) {
-
-		if (!testbit(bitmap, i))
-			printf("bit %d set\n", i);
-	}
-
 	/* happy child forks */
 	for (i = 0; i < procs; i++) {
 
@@ -227,19 +233,14 @@ int main (int argc, char *argv[])
 				if (sigaction(SIGHUP, &c_sa, NULL) == -1)
 					errEXIT("sigaction");
 
-				printf("Child exueciting\n");
 				b = 0;
 				while (b < n) {
 					sem_wait(sem);
-					printf("b = %d happy_index %d\n", b, *happy_index);
 					b = *happy_index;
 					*happy_index = *happy_index + 1;
 					sem_post(sem);
 					if (!testbit(bitmap, b)) {
-						printf("bit set!");
-						printf("happy return %d\n", happy(b));
 						if (happy(b)) 
-							printf("Happy is happy!\n");
 							*numhappy = *numhappy + 1;	
 					}
 				}
